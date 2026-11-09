@@ -29,9 +29,8 @@ public final class BungeeBootstrap extends Plugin implements Platform {
             core = HubCore.start(this);
         } catch (Exception bad) {
             getLogger().log(Level.SEVERE, bad.toString(), bad);
-            return;
+            throw new IllegalStateException(bad);
         }
-        getProxy().getPluginManager().registerCommand(this, new HubCommand(core, this));
         getProxy().getPluginManager().registerListener(this, new BungeeListeners(core));
     }
 
@@ -65,6 +64,12 @@ public final class BungeeBootstrap extends Plugin implements Platform {
     @Override
     public CommandActor console() {
         return console;
+    }
+
+    @Override
+    public void registerCommands(HubCore current) {
+        getProxy().getPluginManager().unregisterCommands(this);
+        getProxy().getPluginManager().registerCommand(this, new HubCommand(current, this));
     }
 
     @Override

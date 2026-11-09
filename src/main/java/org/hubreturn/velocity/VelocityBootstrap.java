@@ -30,6 +30,7 @@ public final class VelocityBootstrap implements Platform {
 
     private HubCore core;
     private ChannelIdentifier channelId;
+    private CommandMeta commandMeta;
 
     @Inject
     public VelocityBootstrap(ProxyServer proxy, Logger logger, @DataDirectory Path dataDir) {
@@ -44,14 +45,8 @@ public final class VelocityBootstrap implements Platform {
             core = HubCore.start(this);
         } catch (Exception bad) {
             logger.error(bad.toString(), bad);
-            return;
+            throw new IllegalStateException(bad);
         }
-
-        CommandMeta meta = proxy.getCommandManager().metaBuilder(core.settings().commandName())
-                .aliases(core.settings().commandAliases().toArray(new String[0]))
-                .plugin(this)
-                .build();
-        proxy.getCommandManager().register(meta, new HubCommand(core, this));
         proxy.getEventManager().register(this, new VelocityListeners(core));
     }
 
@@ -85,6 +80,18 @@ public final class VelocityBootstrap implements Platform {
     @Override
     public CommandActor console() {
         return console;
+    }
+
+    @Override
+    public void registerCommands(HubCore current) {
+        if (commandMeta != null) {
+            proxy.getCommandManager().unregister(commandMeta);
+        }
+        commandMeta = proxy.getCommandManager().metaBuilder(current.settings().commandName())
+                .aliases(current.settings().commandAliases().toArray(new String[0]))
+                .plugin(this)
+                .build();
+        proxy.getCommandManager().register(commandMeta, new HubCommand(current, this));
     }
 
     @Override

@@ -11,10 +11,16 @@ import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.event.ServerConnectedEvent;
 import net.md_5.bungee.api.event.ServerKickEvent;
+import net.md_5.bungee.api.event.TabCompleteEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import org.hubreturn.core.HubCore;
 import org.hubreturn.core.ServerRef;
+import org.hubreturn.core.Settings;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 final class BungeeListeners implements Listener {
 
@@ -102,5 +108,48 @@ final class BungeeListeners implements Listener {
         boolean fromPlayer = sender instanceof ProxiedPlayer;
         String source = sender instanceof Server ? ((Server) sender).getInfo().getName() : "";
         core.onPluginMessage(channel, source, fromPlayer, event.getData());
+    }
+
+    @EventHandler
+    public void onTabComplete(TabCompleteEvent event) {
+        if (!(event.getSender() instanceof ProxiedPlayer)) {
+            return;
+        }
+        String cursor = event.getCursor();
+        String text = cursor.startsWith("/") ? cursor.substring(1) : cursor;
+        String[] parts = text.split(" ", 2);
+        Settings current = core.settings();
+        if (!commandMatches(parts[0], current) || (parts.length > 1 && parts[1].contains(" "))) {
+            return;
+        }
+        String prefix = parts.length > 1 ? parts[1].toLowerCase(Locale.ROOT) : "";
+        ProxiedPlayer player = (ProxiedPlayer) event.getSender();
+        List<String> out = new ArrayList<>();
+        add(out, prefix, current.reloadSubcommand(), permitted(player, current.reloadPermission()));
+        add(out, prefix, current.confirmSubcommand(), permitted(player, current.commandPermission()));
+        add(out, prefix, current.confirmCancelSubcommand(), permitted(player, current.commandPermission()));
+        event.getSuggestions().addAll(out);
+    }
+
+    private static boolean commandMatches(String typed, Settings current) {
+        if (typed.equalsIgnoreCase(current.commandName())) {
+            return true;
+        }
+        for (String alias : current.commandAliases()) {
+            if (typed.equalsIgnoreCase(alias)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void add(List<String> out, String prefix, String value, boolean permitted) {
+        if (permitted && value.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+            out.add(value);
+        }
+    }
+
+    private static boolean permitted(ProxiedPlayer player, String node) {
+        return node.isEmpty() || player.hasPermission(node);
     }
 }
