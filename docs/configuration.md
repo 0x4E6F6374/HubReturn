@@ -2,7 +2,7 @@
 
 English: [configuration.en.md](configuration.en.md)
 
-两个配置文件都在数据目录里：Velocity 是 `plugins/hubreturn/`，BungeeCord 是 `plugins/HubReturn/`。jar 内的模板先原样落地，之后每次加载再用数据目录里的文件按嵌套键覆盖。模板是完整默认值，所以数据目录里只写要改的键也能用；列表是整段替换，不是追加。
+`config.yml` 与各语言文案文件都在数据目录里：Velocity 是 `plugins/hubreturn/`，BungeeCord 是 `plugins/HubReturn/`。jar 内的每份模板先原样落地，之后每次加载再用数据目录里的同名文件按嵌套键覆盖。模板是完整默认值，所以数据目录里只写要改的键也能用；列表是整段替换，不是追加。
 
 缺键、类型不对、枚举值不在允许范围内会抛配置错误：启动时插件加载失败，异常交给代理端；`/hub reload` 时旧配置继续生效。`debug: true` 会把各类丢弃原因打进日志，排消息链路时先开它。
 
@@ -15,6 +15,17 @@ English: [configuration.en.md](configuration.en.md)
 | `debug` | `false` | 记录丢弃原因、踢出未接管等排查信息 |
 
 布尔值只接受 `true` / `false`（大小写不敏感）或 YAML 布尔字面量，写 `1`、`yes` 会报配置错误。
+
+### language
+
+| 键 | 模板值 | 说明 |
+| --- | --- | --- |
+| `default` | `en` | 没命中语言码的玩家、代理端日志、控制台、发给子服的回包 detail 都用它 |
+| `files` | `zh: messages.yml`、`en: messages_en.yml` | 语言码到文件名的映射，也是可用语言清单；`default` 必须是这里的某个 key |
+
+匹配顺序是 `Locale.toString()` 精确命中（例如 `zh_CN`）→ `getLanguage()`（例如 `zh`）→ `default`。Velocity 在玩家还没发客户端设置时、BungeeCord 在取不到 locale 时、以及控制台，都按 `default` 处理。
+
+`messages.yml` 沿用老版本文件名给 `zh`，`v1.0.0` 升级上来自定义的中文文案不会丢。`default` 指向的那套文案键必须完整，缺键会在加载时抛配置错误；其它语言缺键回退到 `default` 的同名键。仓库里有个测试检查所有语言文件的键集合一致。新增语言只要在 `files` 加一项，并放一份同结构的文案文件。
 
 ### command
 
@@ -110,15 +121,15 @@ English: [configuration.en.md](configuration.en.md)
 
 | 键 | 模板值 | 说明 |
 | --- | --- | --- |
-| `chat.keyword` | `confirm` | 聊天确认词 |
+| `chat.keyword` | `confirm` | 聊天确认词，全服统一 |
 | `chat.cancel-keyword` | `cancel` | 聊天取消词，留空表示只能等超时 |
 | `chat.ignore-case` | `true` | 匹配是否忽略大小写 |
-| `chat.replacement` | `""` | 命中后把聊天内容替换成这段文本；留空用 `messages.yml` 的 `confirm.chat-echo` |
-| `click.label` | `&a[点击确认]` | 按钮文字 |
+| `chat.replacement` | `""` | 命中后把聊天内容替换成这段文本；留空用当前玩家语言文案的 `confirm.chat-echo` |
+| `click.label` | `&a[点击确认]` | 按钮文字，全服统一 |
 | `click.command` | `/{command} {confirm}` | 按钮执行的命令，`{command}` 换主命令名，`{confirm}` 换确认子命令名 |
 | `click.placeholder` | `{button}` | 提示文案里要被按钮替换的占位符 |
 
-chat 模式只替换聊天内容，不取消消息：Velocity 从 1.19.1 起把聊天结果设成 denied 会把玩家踢下线。确认词不会原样出现在公屏上。
+chat 模式只替换聊天内容，不取消消息：Velocity 从 1.19.1 起把聊天结果设成 denied 会把玩家踢下线。确认词不会原样出现在公屏上。确认词、取消词与按钮文字都在 `config.yml` 里，不随玩家语言变化。
 
 ### confirm.result
 
@@ -136,9 +147,13 @@ chat 模式只替换聊天内容，不取消消息：Velocity 从 1.19.1 起把�
 
 三种模式在连接回调失败时都会重试；已经连接成功但没确认到达时只回报失败，不再发起重试。三个时间值都不能为负。
 
-## messages.yml
+## 文案文件
 
-`&` 后面跟颜色码，两端都按 legacy 格式解析。`{prefix}` 会自动展开成 `prefix` 的值，其它 `{xxx}` 由调用处传入。键不能删，缺键会在加载时抛配置错误。模板文案是中文，改 `messages.yml` 可以换成自己的语言。
+模板带两套：`messages.yml` 是中文（`zh`），`messages_en.yml` 是英文（`en`，也是 `language.default`）。每份都由 jar 内模板与数据目录里的同名文件按嵌套键合并；改完 `/hub reload` 生效。
+
+`&` 后面跟颜色码，两端都按 legacy 格式解析。`{prefix}` 会自动展开成 `prefix` 的值，其它 `{xxx}` 由调用处传入。`default` 指向的那套不能有缺键，其它文件缺键回退到它的同名键；仓库里有个测试检查所有语言文件的键集合一致。
+
+玩家看到的提示按客户端语言选，日志、控制台与回包 detail 固定用 `default`。要换成自己的语言，改对应文件即可；想加一门语言按 `language.files` 的说明来。
 
 常用占位符：
 
@@ -157,8 +172,8 @@ chat 模式只替换聊天内容，不取消消息：Velocity 从 1.19.1 起把�
 | `kick.redirected` | `{server}` |
 | `log.*` | 按需用 `{player}`, `{server}`, `{lobby}`, `{channel}`, `{lobbies}`, `{strategy}`, `{platform}`, `{error}`, `{source}` |
 
-`confirm.busy-reason`、`confirm.reload-reason`、`confirm.pending-reason`、`confirm.cancel-reason`、`confirm.timeout-reason` 是发给来源子服的回包 detail，不是玩家看到的文案；`confirm.busy` 才是给玩家的提示。`log.*` 只进代理端日志。完整键和当前文案以生成的 `messages.yml` 为准。
+`confirm.busy-reason`、`confirm.reload-reason`、`confirm.pending-reason`、`confirm.cancel-reason`、`confirm.timeout-reason` 是发给来源子服的回包 detail，始终取 `default` 那套文案，不是玩家看到的提示；`confirm.busy` 才是给玩家的提示。`log.*` 只进代理端日志，同样取 `default`。完整键和当前文案以生成的文件为准。
 
 ## 重载时发生什么
 
-`reload` 先构造并校验新快照，全部通过才替换内存里的配置，然后重新注册命令、按需注销并注册通道。等待确认的请求逐个取消：玩家收到 `confirm.reload-cancelled`，消息来源的子服收到 `ok=false` 且 detail 为 `confirm.reload-reason`，对应的冷却记录一并回滚。传送中的请求也被取消，回调被丢弃，避免重复通知。命令冷却表整体清空。
+`reload` 先构造并校验新快照，全部通过才替换内存里的配置与语言包，然后重新注册命令、按需注销并注册通道。等待确认的请求逐个取消：玩家按发起时记下的语言码收到 `confirm.reload-cancelled`，消息来源的子服收到 `ok=false` 且 detail 为 `confirm.reload-reason`，对应的冷却记录一并回滚。传送中的请求也被取消，回调被丢弃，避免重复通知。命令冷却表整体清空。

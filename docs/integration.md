@@ -50,7 +50,7 @@ try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
 }
 ```
 
-`detail` 不是错误码。它可能是 `messages.yml` 里的短语（`confirm.busy-reason`、`confirm.reload-reason`、`confirm.pending-reason`、`confirm.cancel-reason`、`confirm.timeout-reason`、`confirm.not-arrived`），也可能是连接失败的原文；`ok=true` 时通常为空字符串。改文案会改掉这段内容，子服不要拿它做分支判断。
+`detail` 不是错误码。它固定取 `language.default` 指向的那套文案（模板为 `messages_en.yml`，英文），不随玩家语言变化；可能是 `confirm.busy-reason`、`confirm.reload-reason`、`confirm.pending-reason`、`confirm.cancel-reason`、`confirm.timeout-reason`、`confirm.not-arrived` 这类短语，也可能是连接失败的原文；`ok=true` 时通常为空字符串。改文案会改掉这段内容，子服不要拿它做分支判断。
 
 ## 处理顺序
 

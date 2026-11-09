@@ -9,7 +9,7 @@ Players can return with a command. Players kicked by a backend server are redire
 ## Install
 
 1. Download the jar and the matching `.sha256` from [Releases](https://github.com/0x4E6F6374/HubReturn/releases), verify them, and put the jar in the proxy's `plugins/` directory.
-2. Restart the proxy. `config.yml` and `messages.yml` are written on first start. The data directory differs between the two proxies:
+2. Restart the proxy. `config.yml` and the language files are written on first start. The data directory differs between the two proxies:
    - Velocity: `plugins/hubreturn/`
    - BungeeCord: `plugins/HubReturn/`
 3. List the registered lobby server names under `lobbies.servers`. With an empty list the plugin still loads, but every return request has nowhere to go and a warning is logged at startup.
@@ -40,6 +40,14 @@ Command names, aliases, subcommand names, and permission nodes all come from `co
 
 The `confirm` and `cancel` subcommands do not check a permission themselves. When the pending request came from a command, `hubreturn.use` is checked again before the transfer runs, so a revoked permission drops the request. Requests that came from a backend plugin message follow the message source and do not check the player's permission. Both proxies offer tab completion for subcommands, filtered by permission.
 
+## Languages
+
+The template ships Chinese and English text. Player-facing messages follow the client locale: `zh_CN` resolves to `zh`, `en_US` to `en`, and anything unmatched falls back to `language.default` (`en` in the template). Proxy logs, console output, and the `detail` field in replies to backend servers always use `default` and do not change with the player.
+
+`language.files` in `config.yml` maps language codes to file names. `messages.yml` is Chinese and keeps the filename from v1.0.0, so custom text survives an upgrade; `messages_en.yml` is English. Adding a language means one more entry and one more file with the same keys; missing keys fall back to `default`. A test in the repository checks that every language file has the same key set.
+
+`confirm.chat.keyword`, `confirm.chat.cancel-keyword`, `confirm.click.label`, and `confirm.chat.replacement` still live in `config.yml` and are shared by all players. See [docs/configuration.en.md](docs/configuration.en.md) for details.
+
 ## Compatibility
 
 | Item | Status |
@@ -53,11 +61,11 @@ No loading test has been done on a running proxy, so no Minecraft version range 
 
 ## Configuration
 
-The template inside the jar is written to the data directory first, then the file in that directory overrides it key by key. Writing only the keys you want to change is fine; lists are replaced as a whole, not appended to. A missing key, a wrong type, or an unknown enum value fails validation: at startup the exception is passed to the proxy and the plugin fails to load, while `/hub reload` keeps the previous configuration.
+Each template is written to the data directory first, then the copy in that directory overrides it key by key. Writing only the keys you want to change is fine; lists are replaced as a whole, not appended to. A missing key, a wrong type, or an unknown enum value fails validation: at startup the exception is passed to the proxy and the plugin fails to load, while `/hub reload` keeps the previous configuration.
 
 Points worth knowing:
 
-- `reload` re-registers commands and channels. Requests waiting for confirmation and transfers in flight are cancelled; the player gets a notice and the originating backend server gets a failure reply.
+- `reload` re-registers commands and channels and replaces the whole language bundle. Requests waiting for confirmation and transfers in flight are cancelled; the player gets a notice and the originating backend server gets a failure reply.
 - A new request for a player who already has one in flight is refused with a reply, not queued.
 - Cooldowns are rolled back on cancel, timeout, and failed confirmation, so a fresh attempt is not blocked by the earlier one.
 - Retries exclude servers already tried in the same transfer, so a broken server is not picked over and over.

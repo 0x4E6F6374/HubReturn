@@ -50,7 +50,7 @@ try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
 }
 ```
 
-`detail` is not an error code. It may be a short phrase from `messages.yml` (`confirm.busy-reason`, `confirm.reload-reason`, `confirm.pending-reason`, `confirm.cancel-reason`, `confirm.timeout-reason`, `confirm.not-arrived`) or the raw connection failure text; on `ok=true` it is usually an empty string. Editing the message file changes this text, so backend servers should not branch on it.
+`detail` is not an error code. It always comes from the file named by `language.default` (`messages_en.yml` in the template, English) and does not change with the player's language. It may be a short phrase such as `confirm.busy-reason`, `confirm.reload-reason`, `confirm.pending-reason`, `confirm.cancel-reason`, `confirm.timeout-reason`, `confirm.not-arrived`, or the raw connection failure text; on `ok=true` it is usually an empty string. Editing the message file changes this text, so backend servers should not branch on it.
 
 ## Processing order
 

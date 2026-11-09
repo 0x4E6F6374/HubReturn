@@ -4,6 +4,13 @@ English: [CHANGELOG.en.md](CHANGELOG.en.md)
 
 版本以 `v*` tag 为准，日期用 UTC。
 
+## Unreleased
+
+- 新增多语言文案：玩家提示按客户端语言选择（`zh_CN → zh → default`），默认语言 `en`；代理端日志、控制台与回包 detail 固定用默认语言
+- `config.yml` 新增 `language.default` 与 `language.files`；新增英文文案模板 `messages_en.yml`，原 `messages.yml` 保留为中文，升级不丢自定义文案
+- 其它语言缺键回退默认语言的同名键；新增测试校验各语言文案键集合一致
+- `config.yml` 里的确认词、取消词、点击按钮文字仍全服统一，不随玩家语言变化
+
 ## v1.0.0 — 2026-11-09
 
 首个公开版本。GitHub Release 附带 jar 与 `.sha256` 校验文件。
