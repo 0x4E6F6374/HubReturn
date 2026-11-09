@@ -1,6 +1,14 @@
 # 这份是模板。jar 里同一份文件会当默认值参与合并，数据目录里只写要改的键也行。
 debug: false
 
+# default 是没命中语言、日志、控制台、回包的兜底；files 的 key 是语言码，值是文件名
+# messages.yml 留给 zh，老数据目录里的自定义文案不会因改名丢掉
+language:
+  default: en
+  files:
+    zh: messages.yml
+    en: messages_en.yml
+
 command:
   name: hub
   aliases:
