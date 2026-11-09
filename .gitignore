@@ -14,6 +14,9 @@ build/
 .project
 .settings/
 
+# 工作区本地数据，不入库
+.workbuddy/
+
 # env / secrets
 .env
 .env.local
