@@ -18,7 +18,7 @@ English: [README.en.md](README.en.md)
 产物是 Java 17 字节码，代理端需要 Java 17 或更高版本。校验命令里的文件名按实际下载到的版本写：
 
 ```
-sha256sum -c HubReturn-1.0.0.jar.sha256
+sha256sum -c HubReturn-1.0.1.jar.sha256
 ```
 
 ## 命令与权限
