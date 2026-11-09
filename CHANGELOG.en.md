@@ -4,12 +4,14 @@
 
 Versions follow `v*` tags; dates are UTC.
 
-## Unreleased
+## v1.0.1 — 2026-11-09
 
 - Player-facing messages now follow the client locale (`zh_CN -> zh -> default`); the default language is `en`. Proxy logs, console output, and reply details stay on the default language.
 - `config.yml` gains `language.default` and `language.files`; a new English template `messages_en.yml` ships alongside `messages.yml`, which stays Chinese so existing custom text is kept on upgrade.
 - Missing keys in a non-default language fall back to the default file; a new test checks that every language has the same key set.
 - Confirmation words and the click button label still come from `config.yml` and are shared by all players.
+
+Limitations are unchanged from v1.0.0; locale switching has only been compile-checked and unit-tested, so client-language behaviour still needs verification on a running proxy.
 
 ## v1.0.0 — 2026-11-09
 
