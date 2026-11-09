@@ -39,4 +39,13 @@ class SettingsTest {
 
         assertThrows(YamlConfig.ConfigProblem.class, settings::validate);
     }
+
+    @Test
+    void rejectsDefaultLanguageWithoutFile() throws IOException {
+        Files.writeString(dataDir.resolve("config.yml"), "language:\n  default: fr\n");
+
+        Settings settings = Settings.load(dataDir);
+
+        assertThrows(YamlConfig.ConfigProblem.class, settings::validate);
+    }
 }

@@ -2,6 +2,7 @@ package org.hubreturn.core;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +40,7 @@ class ConfirmationsTest {
         UUID id = UUID.randomUUID();
         long now = System.currentTimeMillis();
         confirmations.put(id, new Confirmations.Pending(
-                id, "Notch", Confirmations.Source.MESSAGE, "survival", now - 1));
+                id, "Notch", Confirmations.Source.MESSAGE, "survival", now - 1, Locale.ENGLISH));
 
         assertTrue(confirmations.takeExpired(id, now).isPresent());
         assertFalse(confirmations.has(id));
@@ -47,6 +48,6 @@ class ConfirmationsTest {
 
     private static Confirmations.Pending pending(UUID id) {
         return new Confirmations.Pending(id, "Notch", Confirmations.Source.COMMAND, "",
-                System.currentTimeMillis() + 10_000L);
+                System.currentTimeMillis() + 10_000L, Locale.ENGLISH);
     }
 }

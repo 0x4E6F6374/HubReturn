@@ -7,6 +7,7 @@ import org.mockito.ArgumentCaptor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -73,7 +74,7 @@ class HubCoreTest {
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(player, atLeastOnce()).sendMessage(captor.capture());
-        assertTrue(captor.getAllValues().stream().anyMatch(text -> text.contains("配置已重载")));
+        assertTrue(captor.getAllValues().stream().anyMatch(text -> text.contains("Configuration reloaded")));
     }
 
     @Test
@@ -93,7 +94,8 @@ class HubCoreTest {
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(player, atLeastOnce()).sendMessage(captor.capture());
-        assertTrue(captor.getAllValues().stream().anyMatch(text -> text.contains("已有一次返回请求")));
+        assertTrue(captor.getAllValues().stream()
+                .anyMatch(text -> text.contains("Another return request is in progress")));
     }
 
     @Test
@@ -107,5 +109,25 @@ class HubCoreTest {
         core.onCommand(player, new String[0]);
 
         verify(player, never()).connect(any(ServerRef.class), any(PlayerRef.ConnectCallback.class));
+    }
+
+    @Test
+    void chinesePlayerSeesChinesePrompt() throws IOException {
+        HubCore core = start();
+        withPlayer();
+        when(player.locale()).thenReturn(Locale.CHINESE);
+
+        core.onCommand(player, new String[0]);
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(player, atLeastOnce()).sendMessage(captor.capture());
+        assertTrue(captor.getAllValues().stream().anyMatch(text -> text.contains("确认")));
+    }
+
+    @Test
+    void defaultMessagesAreEnglish() throws IOException {
+        HubCore core = start();
+
+        assertTrue(core.messages().text("command.reloaded").contains("Configuration reloaded"));
     }
 }
