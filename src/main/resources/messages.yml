@@ -1,0 +1,53 @@
+# & 后面跟颜色码，{xxx} 是占位符。别删键，缺键插件会拒绝启动。
+prefix: "&8[&aHub&8] &r"
+
+command:
+  success: "{prefix}&a正在把你送回 &f{server}"
+  failed: "{prefix}&c大厅暂时不可用，稍后再试。"
+  failed-detail: "{prefix}&c传送失败：&7{reason}"
+  already-there: "{prefix}&7你已经在大厅了。"
+  cooldown: "{prefix}&7操作太频繁，{seconds} 秒后再试。"
+  no-permission: "{prefix}&c没有权限。"
+  console-only: "{prefix}&c这条命令只能由玩家执行。"
+  reloaded: "{prefix}&a配置已重载。"
+  reload-failed: "{prefix}&c配置重载失败：&7{error}"
+
+confirm:
+  prompt-repeat: "{prefix}&7再输一次 &f{command} &7确认返回大厅，{seconds} 秒内有效。"
+  prompt-subcommand: "{prefix}&7输入 &f{command} {confirm} &7确认，或 &f{command} {cancel} &7取消，{seconds} 秒内有效。"
+  prompt-chat: "{prefix}&7在聊天栏发 &f{keyword} &7确认，或发 &f{cancel-keyword} &7取消，{seconds} 秒内有效。"
+  prompt-click: "{prefix}&7点击 {button} 确认返回大厅，{seconds} 秒内有效。"
+  pending: "{prefix}&7已有一个待确认的请求，{seconds} 秒内有效。"
+  no-pending: "{prefix}&7当前没有待确认的请求。"
+  expired: "{prefix}&7确认已超时，请重新发起。"
+  cancelled: "{prefix}&7已取消返回大厅。"
+  pending-reason: "已有待确认的请求"
+  cancel-reason: "玩家取消了确认"
+  timeout-reason: "确认超时"
+  not-arrived: "未能确认到达 {server}"
+
+kick:
+  redirected: "{prefix}&7已从 &f{server} &7接回大厅。"
+
+log:
+  loaded: "已载入 {lobbies} 个大厅，策略 {strategy}，平台 {platform}"
+  channel: "通道 {channel} 已注册"
+  no-lobbies: "配置里没有大厅服务器，相关功能会全部落空"
+  bad-channel: "通道 {channel} 注册失败：{error}"
+  kick-dropped: "玩家 {player} 被 {server} 踢出，未接管"
+  kick-redirected: "玩家 {player} 被 {server} 踢出，重定向到 {lobby}"
+  drop-channel: "丢弃消息：通道不匹配（{source}）"
+  drop-player-source: "丢弃消息：客户端直接发包（{source}）"
+  drop-source-server: "丢弃消息：来源子服不在白名单（{source}）"
+  drop-frame: "丢弃消息：字节格式不对（{source}）"
+  drop-action: "丢弃消息：action 不匹配（{source}）"
+  drop-offline: "丢弃消息：目标玩家不在线（{player}）"
+  drop-cooldown: "丢弃消息：玩家 {player} 还在冷却"
+  drop-no-lobby: "丢弃消息：没有可用大厅（{player}）"
+  confirm-sync: "踢出接管和进服首选大厅是同步事件，等不了确认，已按直接传送处理"
+  confirm-timeout: "玩家 {player} 的传送确认超时"
+  confirm-cancelled: "玩家 {player} 取消了传送确认"
+  confirm-offline: "玩家 {player} 确认时已不在线，请求丢弃"
+  delivery-timeout: "玩家 {player} 到 {server} 的送达确认超时"
+  reload: "配置已重载"
+  reload-failed: "配置重载失败：{error}"

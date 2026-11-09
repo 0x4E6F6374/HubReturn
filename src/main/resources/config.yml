@@ -1,0 +1,81 @@
+# 这份是模板。jar 里同一份文件会当默认值参与合并，数据目录里只写要改的键也行。
+debug: false
+
+command:
+  name: hub
+  aliases:
+    - lobby
+    - back
+  permission: hubreturn.use
+  bypass-cooldown-permission: hubreturn.bypass.cooldown
+  cooldown-millis: 1500
+  already-in-lobby: true
+  reload-subcommand: reload
+  reload-permission: hubreturn.reload
+
+lobbies:
+  # least-players / round-robin / random / weighted / first
+  strategy: least-players
+  servers:
+    - name: lobby
+      weight: 1
+  skip-current: true
+  retry-count: 2
+  retry-delay-millis: 500
+
+kick:
+  enabled: true
+  # all / whitelist / blacklist
+  mode: all
+  servers: []
+  # 命中任意一个子串才接管；留空表示不看原因
+  reason-contains: []
+  bypass-permission: hubreturn.bypass.kick
+  show-custom-reason: true
+
+join:
+  enabled: true
+  bypass-permission: hubreturn.bypass.join
+
+messaging:
+  enabled: true
+  channel: hubreturn:main
+  request-action: hub
+  reply-tag: reply
+  reply-enabled: true
+  # 留空表示任何子服都能发；填了就只认这些服务器名
+  allowed-source-servers: []
+  allow-player-source: false
+  cooldown-millis: 0
+
+confirm:
+  # none / repeat-command / subcommand / chat / click
+  mode: repeat-command
+  timeout-millis: 10000
+  # cancel / execute，超时后取消还是直接执行
+  on-timeout: cancel
+  apply-to:
+    command: true
+    messaging: true
+    # 踢出接管和进服首选都是同步事件，等不了玩家输入，开了也只按直接传送处理
+    kick: false
+    join: false
+  subcommand:
+    confirm: confirm
+    cancel: cancel
+  chat:
+    keyword: confirm
+    cancel-keyword: cancel
+    ignore-case: true
+    # 留空表示不改动这条聊天；填了就把原消息替换成这段文本
+    replacement: ""
+  click:
+    label: "&a[点击确认]"
+    # {command} 换成主命令名，{confirm} 换成确认子命令名
+    command: "/{command} {confirm}"
+    placeholder: "{button}"
+  result:
+    # callback / event / poll
+    mode: callback
+    wait-millis: 5000
+    poll-delay-millis: 1000

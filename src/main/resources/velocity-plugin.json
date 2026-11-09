@@ -1,0 +1,7 @@
+{
+  "id": "${plugin.id}",
+  "main": "${plugin.main.velocity}",
+  "name": "${plugin.name}",
+  "version": "${project.version}",
+  "description": "${plugin.description}"
+}

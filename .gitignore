@@ -1,0 +1,36 @@
+# build
+target/
+node_modules/
+dist/
+build/
+.dart_tool/
+*.class
+
+# ide
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# env / secrets
+.env
+.env.local
+*.local.yml
+config/.env
+
+# logs
+logs/
+*.log
+
+# infra binaries & data (本机部署，不入库)
+infra/
+*.exe
+
+# os
+Thumbs.db
+.DS_Store
+
+# jwks 含签名私钥，不入库
+config/jwks.json

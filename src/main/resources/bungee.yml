@@ -1,0 +1,3 @@
+name: ${plugin.name}
+main: ${plugin.main.bungee}
+version: ${project.version}
