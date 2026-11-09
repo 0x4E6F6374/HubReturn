@@ -12,9 +12,9 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
-        <!-- 编译基线取 3.4.0：4.x 保留了同一批方法描述符，低版本编译出的 jar 两边都能加载 -->
+        <!-- 编译基线取 3.4.0，产物固定为 Java 17 字节码 -->
         <velocity.version>3.4.0</velocity.version>
-        <!-- 4.x 的 API 换过 Adventure 大版本，留一个版本用于单独复验签名 -->
+        <!-- 4.x 从 Java 25 起，-Pvelocity4 复验签名须用 JDK 25 构建，release 17 不变 -->
         <velocity.verify.version>4.3.1</velocity.verify.version>
         <bungee.version>1.21-R0.4</bungee.version>
         <snakeyaml.version>2.7</snakeyaml.version>
