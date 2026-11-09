@@ -1,0 +1,86 @@
+name: CI / Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - java: '21'
+            maven_args: ''
+            label: JDK 21 / default
+          # 4.x 的 API 是 Java 25 字节码，复验签名得用同版本 JDK
+          - java: '25'
+            maven_args: '-Pvelocity4'
+            label: JDK 25 / velocity4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Build and test
+        run: mvn -B ${{ matrix.maven_args }} clean verify
+
+  # 只有 tag 才发布，PR 与 push main 只做验证
+  release:
+    name: Release
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build jar
+        run: mvn -B clean verify
+      - name: Collect assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          # original-* 是 shade 前的原始包，不进附件
+          mapfile -t jars < <(find target -maxdepth 1 -type f -name '*.jar' ! -name 'original-*' -print | sort)
+          if [ "${#jars[@]}" -ne 1 ]; then
+            echo "expected one shaded jar, found ${#jars[@]}" >&2
+            exit 1
+          fi
+          jar="${jars[0]}"
+          name="$(basename "$jar")"
+          (cd target && sha256sum "$name") > "$jar.sha256"
+          {
+            echo "files<<EOF"
+            echo "$jar"
+            echo "$jar.sha256"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ steps.assets.outputs.files }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
