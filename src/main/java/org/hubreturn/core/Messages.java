@@ -1,27 +1,27 @@
 package org.hubreturn.core;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 
 public final class Messages {
 
     private final YamlConfig root;
+    private final YamlConfig fallback;
 
-    private Messages(YamlConfig root) {
+    private Messages(YamlConfig root, YamlConfig fallback) {
         this.root = root;
+        this.fallback = fallback;
     }
 
-    public static Messages load(Path dataDir) throws IOException {
-        return new Messages(YamlConfig.load(dataDir, "messages.yml"));
+    static Messages of(YamlConfig root, YamlConfig fallback) {
+        return new Messages(root, fallback);
     }
 
     public String raw(String key) {
-        return root.string(key);
+        return lookup(key);
     }
 
     public String text(String key) {
-        return raw(key).replace("{prefix}", root.string("prefix"));
+        return raw(key).replace("{prefix}", lookup("prefix"));
     }
 
     public String format(String key, Map<String, String> vars) {
@@ -31,5 +31,10 @@ public final class Messages {
             out = out.replace("{" + entry.getKey() + "}", value);
         }
         return out;
+    }
+
+    private String lookup(String key) {
+        Object own = root.opt(key);
+        return String.valueOf(own != null ? own : fallback.req(key));
     }
 }

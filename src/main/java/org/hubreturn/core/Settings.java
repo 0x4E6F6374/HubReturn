@@ -10,6 +10,7 @@ import java.util.Map;
 public final class Settings {
 
     private final boolean debug;
+    private final YamlConfig language;
     private final YamlConfig command;
     private final YamlConfig lobbies;
     private final YamlConfig kick;
@@ -24,6 +25,7 @@ public final class Settings {
 
     private Settings(YamlConfig root) {
         this.debug = root.bool("debug");
+        this.language = root.section("language");
         this.command = root.section("command");
         this.lobbies = root.section("lobbies");
         this.kick = root.section("kick");
@@ -62,9 +64,29 @@ public final class Settings {
                 || clickLabel().isEmpty() || clickCommandTemplate().isEmpty())) {
             throw new YamlConfig.ConfigProblem("confirm.click");
         }
+        Map<String, String> files = languageFiles();
+        if (languageDefault().isEmpty() || !files.containsKey(languageDefault())) {
+            throw new YamlConfig.ConfigProblem("language.default");
+        }
+        if (files.isEmpty()) {
+            throw new YamlConfig.ConfigProblem("language.files");
+        }
+        for (Map.Entry<String, String> entry : files.entrySet()) {
+            if (entry.getKey().isEmpty() || entry.getValue().isEmpty()) {
+                throw new YamlConfig.ConfigProblem("language.files");
+            }
+        }
         nonNegative("confirm.timeout-millis", confirmTimeoutMillis());
         nonNegative("confirm.result.wait-millis", resultWaitMillis());
         nonNegative("confirm.result.poll-delay-millis", resultPollDelayMillis());
+    }
+
+    public String languageDefault() {
+        return language.string("default");
+    }
+
+    public Map<String, String> languageFiles() {
+        return language.stringMap("files");
     }
 
     public boolean debug() {

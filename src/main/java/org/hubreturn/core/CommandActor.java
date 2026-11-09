@@ -1,5 +1,7 @@
 package org.hubreturn.core;
 
+import java.util.Locale;
+
 public interface CommandActor {
 
     String name();
@@ -7,6 +9,8 @@ public interface CommandActor {
     boolean isPlayer();
 
     boolean hasPermission(String node);
+
+    Locale locale();
 
     void sendMessage(String legacy);
 

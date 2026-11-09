@@ -1,5 +1,6 @@
 package org.hubreturn.core;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +46,7 @@ public final class Confirmations {
         return out;
     }
 
-    public record Pending(UUID id, String playerName, Source source, String replySource, long deadline) {
+    public record Pending(UUID id, String playerName, Source source, String replySource,
+                          long deadline, Locale locale) {
     }
 }

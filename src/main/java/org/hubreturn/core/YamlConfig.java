@@ -21,6 +21,10 @@ public final class YamlConfig {
         this.values = values;
     }
 
+    static YamlConfig of(Map<String, Object> values) {
+        return new YamlConfig(new LinkedHashMap<>(values));
+    }
+
     public static YamlConfig load(Path dataDir, String resource) throws IOException {
         // 模板先落地，再拿数据目录的文件按键覆盖，Java 代码里不留任何缺省值
         Files.createDirectories(dataDir);
@@ -110,6 +114,18 @@ public final class YamlConfig {
             throw new ConfigProblem(path);
         }
         return new YamlConfig((Map<String, Object>) value);
+    }
+
+    public Map<String, String> stringMap(String path) {
+        Object value = req(path);
+        if (!(value instanceof Map)) {
+            throw new ConfigProblem(path);
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+            out.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+        }
+        return out;
     }
 
     public String string(String path) {

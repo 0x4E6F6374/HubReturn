@@ -3,6 +3,7 @@ package org.hubreturn.core;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -21,7 +22,7 @@ public final class HubCore {
     private final Map<UUID, CancelToken> inFlight = new ConcurrentHashMap<>();
 
     private volatile Settings settings;
-    private volatile Messages messages;
+    private volatile MessageBundle bundle;
     private volatile LobbySelector selector;
     private volatile String activeChannel;
 
@@ -40,21 +41,35 @@ public final class HubCore {
     }
 
     public Messages messages() {
-        return messages;
+        return bundle.defaultMessages();
+    }
+
+    private Messages logs() {
+        return bundle.defaultMessages();
+    }
+
+    private Messages textsFor(Locale locale) {
+        return bundle.forLocale(locale);
+    }
+
+    private Messages textsFor(CommandActor actor) {
+        return bundle.forLocale(actor.locale());
     }
 
     public void reload() throws IOException {
         Settings next = Settings.load(platform.dataDirectory());
         next.validate();
-        Messages texts = Messages.load(platform.dataDirectory());
+        MessageBundle texts = MessageBundle.load(platform.dataDirectory(),
+                next.languageDefault(), next.languageFiles());
         LobbySelector picker = new LobbySelector(next, platform);
+        Messages logs = texts.defaultMessages();
 
         settings = next;
-        messages = texts;
+        bundle = texts;
         selector = picker;
         cooldowns.configure(next);
         cooldowns.clear();
-        cancelPending(texts);
+        cancelPending(logs);
         for (CancelToken token : inFlight.values()) {
             token.cancel();
         }
@@ -70,10 +85,10 @@ public final class HubCore {
             try {
                 platform.registerChannel(channel);
                 activeChannel = channel;
-                platform.info(texts.format("log.channel", Map.of("channel", channel)));
+                platform.info(logs.format("log.channel", Map.of("channel", channel)));
             } catch (RuntimeException bad) {
                 activeChannel = null;
-                platform.warn(texts.format("log.bad-channel", Map.of(
+                platform.warn(logs.format("log.bad-channel", Map.of(
                         "channel", channel, "error", describe(bad))));
             }
         } else if (!wanted && activeChannel != null) {
@@ -83,9 +98,9 @@ public final class HubCore {
 
         platform.registerCommands(this);
         if (next.lobbyEntries().isEmpty()) {
-            platform.warn(texts.text("log.no-lobbies"));
+            platform.warn(logs.text("log.no-lobbies"));
         }
-        platform.info(texts.format("log.loaded", Map.of(
+        platform.info(logs.format("log.loaded", Map.of(
                 "lobbies", String.valueOf(next.lobbyEntries().size()),
                 "strategy", next.lobbyStrategy(),
                 "platform", platform.platformName())));
@@ -100,7 +115,8 @@ public final class HubCore {
 
     public void onCommand(CommandActor actor, String[] args) {
         Settings current = settings;
-        Messages texts = messages;
+        Messages logs = logs();
+        Messages texts = textsFor(actor);
         String first = args.length > 0 ? args[0] : "";
 
         if (first.equalsIgnoreCase(current.reloadSubcommand())) {
@@ -111,10 +127,10 @@ public final class HubCore {
             try {
                 reload();
                 actor.sendMessage(texts.text("command.reloaded"));
-                platform.info(texts.text("log.reload"));
+                platform.info(logs.text("log.reload"));
             } catch (Exception bad) {
                 actor.sendMessage(texts.format("command.reload-failed", Map.of("error", describe(bad))));
-                platform.error(texts.format("log.reload-failed", Map.of("error", describe(bad))), bad);
+                platform.error(logs.format("log.reload-failed", Map.of("error", describe(bad))), bad);
             }
             return;
         }
@@ -169,7 +185,7 @@ public final class HubCore {
 
     public void onKick(KickView view) {
         Settings current = settings;
-        Messages texts = messages;
+        Messages logs = logs();
         if (!current.kickEnabled()) {
             return;
         }
@@ -177,7 +193,7 @@ public final class HubCore {
                 || !current.kickServerAllowed(view.fromServer())
                 || !current.kickReasonAllowed(view.reason())) {
             if (current.debug()) {
-                platform.info(texts.format("log.kick-dropped", Map.of(
+                platform.info(logs.format("log.kick-dropped", Map.of(
                         "player", view.playerName(), "server", view.fromServer())));
             }
             return;
@@ -185,14 +201,14 @@ public final class HubCore {
 
         Optional<ServerRef> target = selector.pick(view.fromServer());
         if (target.isEmpty()) {
-            platform.warn(texts.format("log.drop-no-lobby", Map.of("player", view.playerName())));
+            platform.warn(logs.format("log.drop-no-lobby", Map.of("player", view.playerName())));
             return;
         }
         String shown = current.kickShowCustomReason()
-                ? texts.format("kick.redirected", Map.of("server", view.fromServer()))
+                ? textsFor(view.locale()).format("kick.redirected", Map.of("server", view.fromServer()))
                 : view.reason();
         view.redirectTo(target.get(), shown);
-        platform.info(texts.format("log.kick-redirected", Map.of(
+        platform.info(logs.format("log.kick-redirected", Map.of(
                 "player", view.playerName(), "server", view.fromServer(), "lobby", target.get().name())));
     }
 
@@ -206,61 +222,61 @@ public final class HubCore {
 
     public void onPluginMessage(String channel, String source, boolean fromPlayer, byte[] data) {
         Settings current = settings;
-        Messages texts = messages;
+        Messages logs = logs();
         if (!current.messagingEnabled()) {
             return;
         }
         if (!channel.equals(current.channel())) {
-            drop(texts, "log.drop-channel", source, "");
+            drop(logs, "log.drop-channel", source, "");
             return;
         }
         if (fromPlayer && !current.allowPlayerSource()) {
-            drop(texts, "log.drop-player-source", source, "");
+            drop(logs, "log.drop-player-source", source, "");
             return;
         }
         if (!current.sourceAllowed(source) || (source.isEmpty() && !fromPlayer)) {
-            drop(texts, "log.drop-source-server", source, "");
+            drop(logs, "log.drop-source-server", source, "");
             return;
         }
 
         MessageCodec.Request request = MessageCodec.parse(data);
         if (request == null) {
-            drop(texts, "log.drop-frame", source, "");
+            drop(logs, "log.drop-frame", source, "");
             return;
         }
         if (!request.action().equals(current.requestAction())) {
-            drop(texts, "log.drop-action", source, "");
+            drop(logs, "log.drop-action", source, "");
             return;
         }
 
         Optional<PlayerRef> found = platform.player(request.player());
         if (found.isEmpty()) {
-            drop(texts, "log.drop-offline", source, request.player());
+            drop(logs, "log.drop-offline", source, request.player());
             reply(current, source, request.player(), false, "");
             return;
         }
 
         PlayerRef player = found.get();
         if (cooldowns.remaining(player.uuid(), Cooldowns.Kind.MESSAGE) > 0) {
-            drop(texts, "log.drop-cooldown", source, player.name());
+            drop(logs, "log.drop-cooldown", source, player.name());
             reply(current, source, player.name(), false, "");
             return;
         }
         cooldowns.mark(player.uuid(), Cooldowns.Kind.MESSAGE);
 
         if (current.confirmOnMessaging() && !current.confirmMode().equals("none")) {
-            if (!startConfirmation(player, Confirmations.Source.MESSAGE, source, current, texts)) {
-                reply(current, source, player.name(), false, texts.text("confirm.pending-reason"));
+            if (!startConfirmation(player, Confirmations.Source.MESSAGE, source, current, textsFor(player))) {
+                reply(current, source, player.name(), false, logs.text("confirm.pending-reason"));
                 cooldowns.clear(player.uuid(), Cooldowns.Kind.MESSAGE);
             }
             return;
         }
-        messageTransfer(player, source, current, texts);
+        messageTransfer(player, source, current, logs);
     }
 
     public String onChat(UUID id, String name, String message) {
         Settings current = settings;
-        Messages texts = messages;
+        Messages logs = logs();
         if (!current.confirmMode().equals("chat") || !confirmations.has(id)) {
             return null;
         }
@@ -273,9 +289,10 @@ public final class HubCore {
         }
         PlayerRef player = resolve(id, name);
         if (player == null) {
-            platform.info(texts.format("log.confirm-offline", Map.of("player", name)));
+            platform.info(logs.format("log.confirm-offline", Map.of("player", name)));
             return null;
         }
+        Messages texts = textsFor(player);
         if (confirmWord) {
             confirm(player, texts);
         } else {
@@ -289,15 +306,15 @@ public final class HubCore {
         delivery.arrived(id, server);
     }
 
-    private void cancelPending(Messages texts) {
+    private void cancelPending(Messages logs) {
         for (Confirmations.Pending pending : confirmations.drain().values()) {
             PlayerRef live = resolve(pending.id(), pending.playerName());
             if (live != null) {
-                live.sendMessage(texts.text("confirm.reload-cancelled"));
+                live.sendMessage(textsFor(pending.locale()).text("confirm.reload-cancelled"));
             }
             if (pending.source() == Confirmations.Source.MESSAGE) {
                 reply(settings, pending.replySource(), pending.playerName(), false,
-                        texts.text("confirm.reload-reason"));
+                        logs.text("confirm.reload-reason"));
             }
             cooldowns.clear(pending.id(), kind(pending));
         }
@@ -309,7 +326,7 @@ public final class HubCore {
         long now = System.currentTimeMillis();
         long deadline = now + window;
         if (!confirmations.put(player.uuid(), new Confirmations.Pending(
-                player.uuid(), player.name(), source, replySource, deadline))) {
+                player.uuid(), player.name(), source, replySource, deadline, player.locale()))) {
             long left = confirmations.remaining(player.uuid(), now);
             player.sendMessage(texts.format("confirm.pending", Map.of(
                     "seconds", String.valueOf((left + 999) / 1000))));
@@ -367,7 +384,7 @@ public final class HubCore {
         }
         PlayerRef live = resolve(pending.id(), pending.playerName());
         if (live == null) {
-            platform.info(texts.format("log.confirm-offline", Map.of("player", pending.playerName())));
+            platform.info(logs().format("log.confirm-offline", Map.of("player", pending.playerName())));
             cooldowns.clear(pending.id(), kind(pending));
             return;
         }
@@ -391,29 +408,30 @@ public final class HubCore {
         player.sendMessage(texts.text("confirm.cancelled"));
         if (pending.source() == Confirmations.Source.MESSAGE) {
             reply(settings, pending.replySource(), pending.playerName(), false,
-                    texts.text("confirm.cancel-reason"));
+                    logs().text("confirm.cancel-reason"));
         }
-        platform.info(texts.format("log.confirm-cancelled", Map.of("player", pending.playerName())));
+        platform.info(logs().format("log.confirm-cancelled", Map.of("player", pending.playerName())));
     }
 
     private void onConfirmTimeout(UUID id) {
         Settings current = settings;
-        Messages texts = messages;
+        Messages logs = logs();
         Optional<Confirmations.Pending> found = confirmations.takeExpired(id, System.currentTimeMillis());
         if (found.isEmpty()) {
             return;
         }
         Confirmations.Pending pending = found.get();
+        Messages texts = textsFor(pending.locale());
         if (current.confirmOnTimeout().equals("execute")) {
             PlayerRef live = resolve(pending.id(), pending.playerName());
             if (live == null) {
-                platform.info(texts.format("log.confirm-offline", Map.of("player", pending.playerName())));
+                platform.info(logs.format("log.confirm-offline", Map.of("player", pending.playerName())));
                 cooldowns.clear(id, kind(pending));
                 return;
             }
             if (pending.source() == Confirmations.Source.COMMAND
                     && !allowed(live, current.commandPermission())) {
-                platform.info(texts.format("log.confirm-permission", Map.of("player", pending.playerName())));
+                platform.info(logs.format("log.confirm-permission", Map.of("player", pending.playerName())));
                 cooldowns.clear(id, kind(pending));
                 return;
             }
@@ -427,9 +445,9 @@ public final class HubCore {
         cooldowns.clear(id, kind(pending));
         if (pending.source() == Confirmations.Source.MESSAGE) {
             reply(current, pending.replySource(), pending.playerName(), false,
-                    texts.text("confirm.timeout-reason"));
+                    logs.text("confirm.timeout-reason"));
         }
-        platform.info(texts.format("log.confirm-timeout", Map.of("player", pending.playerName())));
+        platform.info(logs.format("log.confirm-timeout", Map.of("player", pending.playerName())));
     }
 
     private void execute(PlayerRef player, Confirmations.Pending pending, Messages texts) {
@@ -437,7 +455,7 @@ public final class HubCore {
             commandTransfer(player, player.currentServer(), texts);
             return;
         }
-        messageTransfer(player, pending.replySource(), settings, texts);
+        messageTransfer(player, pending.replySource(), settings, logs());
     }
 
     private void commandTransfer(PlayerRef player, String from, Messages texts) {
@@ -456,14 +474,14 @@ public final class HubCore {
         }, () -> player.sendMessage(texts.text("confirm.reload-cancelled")));
     }
 
-    private void messageTransfer(PlayerRef player, String source, Settings current, Messages texts) {
+    private void messageTransfer(PlayerRef player, String source, Settings current, Messages logs) {
         transfer(player, player.currentServer(), result -> {
             if (result.notice.isEmpty() && !result.ok) {
-                platform.warn(texts.format("log.drop-no-lobby", Map.of("player", player.name())));
+                platform.warn(logs.format("log.drop-no-lobby", Map.of("player", player.name())));
             }
             reply(current, source, player.name(), result.ok, result.detail);
         }, () -> reply(settings, source, player.name(), false,
-                texts.text("confirm.reload-reason")));
+                logs.text("confirm.reload-reason")));
     }
 
     private void transfer(PlayerRef player, String from, Consumer<TransferResult> done,
@@ -472,7 +490,7 @@ public final class HubCore {
         CancelToken token = new CancelToken(onCancel);
         if (inFlight.putIfAbsent(id, token) != null) {
             done.accept(new TransferResult("", false,
-                    messages.text("confirm.busy-reason"), messages.text("confirm.busy")));
+                    logs().text("confirm.busy-reason"), textsFor(player).text("confirm.busy")));
             return;
         }
         attempt(player, from, settings.retryCount(), new HashSet<>(), result -> {
@@ -484,7 +502,7 @@ public final class HubCore {
 
     private void attempt(PlayerRef player, String from, int retriesLeft, Set<String> tried,
                          Consumer<TransferResult> done) {
-        Messages texts = messages;
+        Messages logs = logs();
         Optional<ServerRef> target = selector.pick(from, tried);
         if (target.isEmpty()) {
             done.accept(new TransferResult("", false, ""));
@@ -497,17 +515,17 @@ public final class HubCore {
         if (watch) {
             DeliveryWatch.Watch expected = delivery.await(player.uuid(), chosen.name(), arrived -> {
                 done.accept(new TransferResult(chosen.name(), arrived,
-                        arrived ? "" : texts.format("confirm.not-arrived",
+                        arrived ? "" : logs.format("confirm.not-arrived",
                                 Map.of("server", chosen.name()))));
             });
             if (expected == null) {
                 done.accept(new TransferResult("", false,
-                        texts.text("confirm.busy-reason"), texts.text("confirm.busy")));
+                        logs.text("confirm.busy-reason"), textsFor(player).text("confirm.busy")));
                 return;
             }
             platform.schedule(() -> {
                 if (delivery.expire(player.uuid(), expected)) {
-                    platform.info(texts.format("log.delivery-timeout", Map.of(
+                    platform.info(logs.format("log.delivery-timeout", Map.of(
                             "player", player.name(), "server", chosen.name())));
                 }
             }, current.resultWaitMillis());
@@ -539,7 +557,7 @@ public final class HubCore {
             platform.schedule(() -> {
                 boolean arrived = player.currentServer().equalsIgnoreCase(server);
                 done.accept(new TransferResult(server, arrived,
-                        arrived ? "" : messages.format("confirm.not-arrived", Map.of("server", server))));
+                        arrived ? "" : logs().format("confirm.not-arrived", Map.of("server", server))));
             }, current.resultPollDelayMillis());
             return;
         }
@@ -608,6 +626,8 @@ public final class HubCore {
         String reason();
 
         boolean hasPermission(String node);
+
+        Locale locale();
 
         void redirectTo(ServerRef target, String message);
     }
