@@ -133,7 +133,18 @@ public final class YamlConfig {
     }
 
     public boolean bool(String path) {
-        return Boolean.parseBoolean(String.valueOf(req(path)).trim());
+        Object value = req(path);
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.equalsIgnoreCase("true")) {
+            return true;
+        }
+        if (text.equalsIgnoreCase("false")) {
+            return false;
+        }
+        throw new ConfigProblem(path);
     }
 
     public List<String> strings(String path) {

@@ -39,8 +39,10 @@ public final class Confirmations {
         return value == null ? 0 : Math.max(value.deadline() - now, 0);
     }
 
-    public void clear() {
+    public Map<UUID, Pending> drain() {
+        Map<UUID, Pending> out = new ConcurrentHashMap<>(pending);
         pending.clear();
+        return out;
     }
 
     public record Pending(UUID id, String playerName, Source source, String replySource, long deadline) {

@@ -23,6 +23,8 @@ public interface Platform {
 
     void schedule(Runnable task, long delayMillis);
 
+    void registerCommands(HubCore core);
+
     void info(String text);
 
     void warn(String text);

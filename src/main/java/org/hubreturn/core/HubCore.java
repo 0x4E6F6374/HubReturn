@@ -2,9 +2,13 @@ package org.hubreturn.core;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -14,6 +18,7 @@ public final class HubCore {
     private final Cooldowns cooldowns = new Cooldowns();
     private final Confirmations confirmations = new Confirmations();
     private final DeliveryWatch delivery = new DeliveryWatch();
+    private final Map<UUID, CancelToken> inFlight = new ConcurrentHashMap<>();
 
     private volatile Settings settings;
     private volatile Messages messages;
@@ -49,12 +54,12 @@ public final class HubCore {
         selector = picker;
         cooldowns.configure(next);
         cooldowns.clear();
-        confirmations.clear();
-        delivery.clear();
-
-        if (next.confirmOnKick() || next.confirmOnJoin()) {
-            platform.warn(texts.text("log.confirm-sync"));
+        cancelPending(texts);
+        for (CancelToken token : inFlight.values()) {
+            token.cancel();
         }
+        inFlight.clear();
+        delivery.clear();
 
         String channel = next.channel();
         boolean wanted = next.messagingEnabled() && !channel.isEmpty();
@@ -76,6 +81,7 @@ public final class HubCore {
             activeChannel = null;
         }
 
+        platform.registerCommands(this);
         if (next.lobbyEntries().isEmpty()) {
             platform.warn(texts.text("log.no-lobbies"));
         }
@@ -153,7 +159,9 @@ public final class HubCore {
         }
 
         if (current.confirmOnCommand() && !current.confirmMode().equals("none")) {
-            startConfirmation(player, Confirmations.Source.COMMAND, "", current, texts);
+            if (!startConfirmation(player, Confirmations.Source.COMMAND, "", current, texts)) {
+                cooldowns.clear(player.uuid(), Cooldowns.Kind.COMMAND);
+            }
             return;
         }
         commandTransfer(player, player.currentServer(), texts);
@@ -243,6 +251,7 @@ public final class HubCore {
         if (current.confirmOnMessaging() && !current.confirmMode().equals("none")) {
             if (!startConfirmation(player, Confirmations.Source.MESSAGE, source, current, texts)) {
                 reply(current, source, player.name(), false, texts.text("confirm.pending-reason"));
+                cooldowns.clear(player.uuid(), Cooldowns.Kind.MESSAGE);
             }
             return;
         }
@@ -251,6 +260,7 @@ public final class HubCore {
 
     public String onChat(UUID id, String name, String message) {
         Settings current = settings;
+        Messages texts = messages;
         if (!current.confirmMode().equals("chat") || !confirmations.has(id)) {
             return null;
         }
@@ -263,20 +273,34 @@ public final class HubCore {
         }
         PlayerRef player = resolve(id, name);
         if (player == null) {
-            platform.info(messages.format("log.confirm-offline", Map.of("player", name)));
+            platform.info(texts.format("log.confirm-offline", Map.of("player", name)));
             return null;
         }
         if (confirmWord) {
-            confirm(player, messages);
+            confirm(player, texts);
         } else {
-            cancel(player, messages);
+            cancel(player, texts);
         }
         String replacement = current.chatReplacement();
-        return replacement.isEmpty() ? null : replacement;
+        return replacement.isEmpty() ? texts.text("confirm.chat-echo") : replacement;
     }
 
     public void onServerConnected(UUID id, String server) {
         delivery.arrived(id, server);
+    }
+
+    private void cancelPending(Messages texts) {
+        for (Confirmations.Pending pending : confirmations.drain().values()) {
+            PlayerRef live = resolve(pending.id(), pending.playerName());
+            if (live != null) {
+                live.sendMessage(texts.text("confirm.reload-cancelled"));
+            }
+            if (pending.source() == Confirmations.Source.MESSAGE) {
+                reply(settings, pending.replySource(), pending.playerName(), false,
+                        texts.text("confirm.reload-reason"));
+            }
+            cooldowns.clear(pending.id(), kind(pending));
+        }
     }
 
     private boolean startConfirmation(PlayerRef player, Confirmations.Source source, String replySource,
@@ -338,11 +362,19 @@ public final class HubCore {
         Confirmations.Pending pending = found.get();
         if (pending.deadline() <= System.currentTimeMillis()) {
             player.sendMessage(texts.text("confirm.expired"));
+            cooldowns.clear(pending.id(), kind(pending));
             return;
         }
         PlayerRef live = resolve(pending.id(), pending.playerName());
         if (live == null) {
             platform.info(texts.format("log.confirm-offline", Map.of("player", pending.playerName())));
+            cooldowns.clear(pending.id(), kind(pending));
+            return;
+        }
+        if (pending.source() == Confirmations.Source.COMMAND
+                && !allowed(live, settings.commandPermission())) {
+            live.sendMessage(texts.text("command.no-permission"));
+            cooldowns.clear(pending.id(), kind(pending));
             return;
         }
         execute(live, pending, texts);
@@ -355,6 +387,7 @@ public final class HubCore {
             return;
         }
         Confirmations.Pending pending = found.get();
+        cooldowns.clear(pending.id(), kind(pending));
         player.sendMessage(texts.text("confirm.cancelled"));
         if (pending.source() == Confirmations.Source.MESSAGE) {
             reply(settings, pending.replySource(), pending.playerName(), false,
@@ -375,6 +408,13 @@ public final class HubCore {
             PlayerRef live = resolve(pending.id(), pending.playerName());
             if (live == null) {
                 platform.info(texts.format("log.confirm-offline", Map.of("player", pending.playerName())));
+                cooldowns.clear(id, kind(pending));
+                return;
+            }
+            if (pending.source() == Confirmations.Source.COMMAND
+                    && !allowed(live, current.commandPermission())) {
+                platform.info(texts.format("log.confirm-permission", Map.of("player", pending.playerName())));
+                cooldowns.clear(id, kind(pending));
                 return;
             }
             execute(live, pending, texts);
@@ -384,6 +424,7 @@ public final class HubCore {
         if (live != null) {
             live.sendMessage(texts.text("confirm.expired"));
         }
+        cooldowns.clear(id, kind(pending));
         if (pending.source() == Confirmations.Source.MESSAGE) {
             reply(current, pending.replySource(), pending.playerName(), false,
                     texts.text("confirm.timeout-reason"));
@@ -401,6 +442,10 @@ public final class HubCore {
 
     private void commandTransfer(PlayerRef player, String from, Messages texts) {
         transfer(player, from, result -> {
+            if (!result.notice.isEmpty()) {
+                player.sendMessage(result.notice);
+                return;
+            }
             if (result.ok) {
                 player.sendMessage(texts.format("command.success", Map.of("server", result.server)));
             } else if (result.detail.isEmpty()) {
@@ -408,39 +453,61 @@ public final class HubCore {
             } else {
                 player.sendMessage(texts.format("command.failed-detail", Map.of("reason", result.detail)));
             }
-        });
+        }, () -> player.sendMessage(texts.text("confirm.reload-cancelled")));
     }
 
     private void messageTransfer(PlayerRef player, String source, Settings current, Messages texts) {
         transfer(player, player.currentServer(), result -> {
-            if (!result.ok) {
+            if (result.notice.isEmpty() && !result.ok) {
                 platform.warn(texts.format("log.drop-no-lobby", Map.of("player", player.name())));
             }
             reply(current, source, player.name(), result.ok, result.detail);
+        }, () -> reply(settings, source, player.name(), false,
+                texts.text("confirm.reload-reason")));
+    }
+
+    private void transfer(PlayerRef player, String from, Consumer<TransferResult> done,
+                          Runnable onCancel) {
+        UUID id = player.uuid();
+        CancelToken token = new CancelToken(onCancel);
+        if (inFlight.putIfAbsent(id, token) != null) {
+            done.accept(new TransferResult("", false,
+                    messages.text("confirm.busy-reason"), messages.text("confirm.busy")));
+            return;
+        }
+        attempt(player, from, settings.retryCount(), new HashSet<>(), result -> {
+            if (inFlight.remove(id, token) && !token.cancelled()) {
+                done.accept(result);
+            }
         });
     }
 
-    private void transfer(PlayerRef player, String from, Consumer<TransferResult> done) {
-        attempt(player, from, settings.retryCount(), done);
-    }
-
-    private void attempt(PlayerRef player, String from, int retriesLeft, Consumer<TransferResult> done) {
-        Optional<ServerRef> target = selector.pick(from);
+    private void attempt(PlayerRef player, String from, int retriesLeft, Set<String> tried,
+                         Consumer<TransferResult> done) {
+        Messages texts = messages;
+        Optional<ServerRef> target = selector.pick(from, tried);
         if (target.isEmpty()) {
             done.accept(new TransferResult("", false, ""));
             return;
         }
         ServerRef chosen = target.get();
+        tried.add(chosen.name());
         Settings current = settings;
         boolean watch = current.resultMode().equals("event");
         if (watch) {
             DeliveryWatch.Watch expected = delivery.await(player.uuid(), chosen.name(), arrived -> {
                 done.accept(new TransferResult(chosen.name(), arrived,
-                        arrived ? "" : messages.format("confirm.not-arrived", Map.of("server", chosen.name()))));
+                        arrived ? "" : texts.format("confirm.not-arrived",
+                                Map.of("server", chosen.name()))));
             });
+            if (expected == null) {
+                done.accept(new TransferResult("", false,
+                        texts.text("confirm.busy-reason"), texts.text("confirm.busy")));
+                return;
+            }
             platform.schedule(() -> {
                 if (delivery.expire(player.uuid(), expected)) {
-                    platform.info(messages.format("log.delivery-timeout", Map.of(
+                    platform.info(texts.format("log.delivery-timeout", Map.of(
                             "player", player.name(), "server", chosen.name())));
                 }
             }, current.resultWaitMillis());
@@ -454,7 +521,7 @@ public final class HubCore {
                     done.accept(new TransferResult(chosen.name(), false, detail == null ? "" : detail));
                     return;
                 }
-                platform.schedule(() -> attempt(player, from, retriesLeft - 1, done),
+                platform.schedule(() -> attempt(player, from, retriesLeft - 1, tried, done),
                         settings.retryDelayMillis());
                 return;
             }
@@ -524,6 +591,11 @@ public final class HubCore {
         return false;
     }
 
+    private static Cooldowns.Kind kind(Confirmations.Pending pending) {
+        return pending.source() == Confirmations.Source.COMMAND
+                ? Cooldowns.Kind.COMMAND : Cooldowns.Kind.MESSAGE;
+    }
+
     private static String describe(Throwable error) {
         return error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
     }
@@ -544,11 +616,36 @@ public final class HubCore {
         private final String server;
         private final boolean ok;
         private final String detail;
+        private final String notice;
 
         TransferResult(String server, boolean ok, String detail) {
+            this(server, ok, detail, "");
+        }
+
+        TransferResult(String server, boolean ok, String detail, String notice) {
             this.server = server;
             this.ok = ok;
             this.detail = detail;
+            this.notice = notice;
+        }
+    }
+
+    private static final class CancelToken {
+        private final Runnable onCancel;
+        private final AtomicBoolean cancelled = new AtomicBoolean();
+
+        CancelToken(Runnable onCancel) {
+            this.onCancel = onCancel;
+        }
+
+        void cancel() {
+            if (cancelled.compareAndSet(false, true)) {
+                onCancel.run();
+            }
+        }
+
+        boolean cancelled() {
+            return cancelled.get();
         }
     }
 }

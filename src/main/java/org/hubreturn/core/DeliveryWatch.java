@@ -12,8 +12,7 @@ public final class DeliveryWatch {
 
     public Watch await(UUID id, String server, Consumer<Boolean> done) {
         Watch watch = new Watch(server, done);
-        waiting.put(id, watch);
-        return watch;
+        return waiting.putIfAbsent(id, watch) == null ? watch : null;
     }
 
     public void arrived(UUID id, String server) {

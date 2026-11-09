@@ -36,6 +36,10 @@ public final class Cooldowns {
         last.put(new Key(id, kind), System.currentTimeMillis());
     }
 
+    public void clear(UUID id, Kind kind) {
+        last.remove(new Key(id, kind));
+    }
+
     public void clear() {
         last.clear();
     }

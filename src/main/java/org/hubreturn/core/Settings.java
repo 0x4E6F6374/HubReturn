@@ -255,14 +255,6 @@ public final class Settings {
         return applyTo.bool("messaging");
     }
 
-    public boolean confirmOnKick() {
-        return applyTo.bool("kick");
-    }
-
-    public boolean confirmOnJoin() {
-        return applyTo.bool("join");
-    }
-
     public String confirmSubcommand() {
         return subcommand.string("confirm");
     }

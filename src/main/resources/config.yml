@@ -57,9 +57,6 @@ confirm:
   apply-to:
     command: true
     messaging: true
-    # 踢出接管和进服首选都是同步事件，等不了玩家输入，开了也只按直接传送处理
-    kick: false
-    join: false
   subcommand:
     confirm: confirm
     cancel: cancel
@@ -67,7 +64,7 @@ confirm:
     keyword: confirm
     cancel-keyword: cancel
     ignore-case: true
-    # 留空表示不改动这条聊天；填了就把原消息替换成这段文本
+    # 留空用 messages.yml 的 confirm.chat-echo 顶掉确认词；填了就替换成这段文本
     replacement: ""
   click:
     label: "&a[点击确认]"
@@ -75,7 +72,8 @@ confirm:
     command: "/{command} {confirm}"
     placeholder: "{button}"
   result:
-    # callback / event / poll
+    # callback 只看连接结果，event 靠进服事件确认到达，poll 延迟后查当前服务器
+    # 连接失败三种模式都会重试；未确认到达只回报失败，不再发起重试
     mode: callback
     wait-millis: 5000
     poll-delay-millis: 1000

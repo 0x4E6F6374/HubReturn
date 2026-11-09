@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -20,9 +21,16 @@ public final class LobbySelector {
     }
 
     public Optional<ServerRef> pick(String current) {
+        return pick(current, Set.of());
+    }
+
+    public Optional<ServerRef> pick(String current, Set<String> excluded) {
         List<Candidate> pool = new ArrayList<>();
         for (Settings.LobbyEntry entry : settings.lobbyEntries()) {
             if (settings.skipCurrent() && current != null && entry.name().equalsIgnoreCase(current)) {
+                continue;
+            }
+            if (contains(excluded, entry.name())) {
                 continue;
             }
             platform.server(entry.name()).ifPresent(server -> pool.add(new Candidate(server, entry.weight())));
@@ -61,6 +69,15 @@ public final class LobbySelector {
             }
         }
         return pool.get(pool.size() - 1);
+    }
+
+    private static boolean contains(Set<String> names, String value) {
+        for (String name : names) {
+            if (name.equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void checkStrategy(String value) {
