@@ -18,6 +18,7 @@ import org.hubreturn.core.ServerRef;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -152,6 +153,11 @@ public final class VelocityBootstrap implements Platform {
         @Override
         public boolean hasPermission(String node) {
             return true;
+        }
+
+        @Override
+        public Locale locale() {
+            return null;
         }
 
         @Override

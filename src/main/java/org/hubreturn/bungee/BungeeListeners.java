@@ -59,6 +59,11 @@ final class BungeeListeners implements Listener {
             }
 
             @Override
+            public Locale locale() {
+                return player.getLocale();
+            }
+
+            @Override
             public void redirectTo(ServerRef target, String message) {
                 // 新版 BungeeCord 把踢出原因收成单个 BaseComponent，接管后的提示也复用这个字段
                 event.setCancelled(true);

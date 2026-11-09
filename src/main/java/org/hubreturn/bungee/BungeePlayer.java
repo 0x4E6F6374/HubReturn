@@ -9,6 +9,7 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import org.hubreturn.core.PlayerRef;
 import org.hubreturn.core.ServerRef;
 
+import java.util.Locale;
 import java.util.UUID;
 
 final class BungeePlayer implements PlayerRef {
@@ -37,6 +38,11 @@ final class BungeePlayer implements PlayerRef {
     @Override
     public UUID uuid() {
         return player.getUniqueId();
+    }
+
+    @Override
+    public Locale locale() {
+        return player.getLocale();
     }
 
     @Override

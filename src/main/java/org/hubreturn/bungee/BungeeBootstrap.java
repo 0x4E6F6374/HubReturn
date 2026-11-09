@@ -12,6 +12,7 @@ import org.hubreturn.core.PlayerRef;
 import org.hubreturn.core.ServerRef;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -128,6 +129,11 @@ public final class BungeeBootstrap extends Plugin implements Platform {
         @Override
         public boolean hasPermission(String node) {
             return true;
+        }
+
+        @Override
+        public Locale locale() {
+            return null;
         }
 
         @Override

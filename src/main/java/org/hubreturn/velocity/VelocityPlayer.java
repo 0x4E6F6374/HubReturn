@@ -8,6 +8,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.hubreturn.core.PlayerRef;
 import org.hubreturn.core.ServerRef;
 
+import java.util.Locale;
 import java.util.UUID;
 
 final class VelocityPlayer implements PlayerRef {
@@ -36,6 +37,11 @@ final class VelocityPlayer implements PlayerRef {
     @Override
     public UUID uuid() {
         return player.getUniqueId();
+    }
+
+    @Override
+    public Locale locale() {
+        return player.hasSentPlayerSettings() ? player.getEffectiveLocale() : null;
     }
 
     @Override

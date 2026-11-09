@@ -13,6 +13,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.hubreturn.core.HubCore;
 import org.hubreturn.core.ServerRef;
 
+import java.util.Locale;
+
 final class VelocityListeners {
 
     private final HubCore core;
@@ -48,6 +50,11 @@ final class VelocityListeners {
             @Override
             public boolean hasPermission(String node) {
                 return player.hasPermission(node);
+            }
+
+            @Override
+            public Locale locale() {
+                return player.hasSentPlayerSettings() ? player.getEffectiveLocale() : null;
             }
 
             @Override
