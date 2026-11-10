@@ -4,6 +4,13 @@
 
 Versions follow `v*` tags; dates are UTC.
 
+## Unreleased
+
+- Initial server selection no longer overwrites the target unconditionally: both proxies now run last and only replace the proxy default, keeping forced hosts and targets set by other plugins
+- `config.yml` gains `join.override-existing` (default `false`); setting it to `true` restores the old unconditional behaviour
+- `kick.enabled` now defaults to `false` in the template so a fresh install does not take over every backend kick; configure `kick.mode` and `kick.servers` before enabling it
+- Chinese and English README and configuration docs now cover mixed networks, Forge backends, and listener ordering
+
 ## v1.0.1 — 2026-11-09
 
 - Player-facing messages now follow the client locale (`zh_CN -> zh -> default`); the default language is `en`. Proxy logs, console output, and reply details stay on the default language.

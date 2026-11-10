@@ -4,7 +4,7 @@ English: [README.en.md](README.en.md)
 
 跑在代理端的返回大厅插件。同一个 jar 放进 Velocity 或 BungeeCord 的插件目录即可，业务逻辑只有一份，两端各自接事件、调度和消息通道。
 
-玩家可以用命令回大厅；被子服踢出时接回大厅；首次进服时优先送进大厅；子服也能通过插件消息把指定玩家送回。目标大厅从配置好的服务器列表里按策略挑选。
+玩家可以用命令回大厅；被子服踢出时可以接回大厅；首次进服时可以送进大厅；子服也能通过插件消息把指定玩家送回。目标大厅从配置好的服务器列表里按策略挑选。
 
 ## 安装
 
@@ -69,6 +69,8 @@ sha256sum -c HubReturn-1.0.1.jar.sha256
 - 同一玩家已有请求在处理时，新请求直接拒绝并回包，不排队。
 - 冷却在取消、超时、确认失败时回滚，重新发起不会被自己刚才的冷却挡住。
 - 连接失败重试时排除本次已试过的服务器，不会反复撞同一台故障服。
+- `kick.enabled` 模板默认是 `false`。启用前先设 `kick.mode` 和 `kick.servers`：`mode: all` 会接管所有后端踢人，混合网络里 Forge 子服的踢出也会被送进大厅。
+- `join` 只在事件给出的初始服是代理默认服时才换成大厅。Velocity 用 `PostOrder.LAST`、BungeeCord 用 `EventPriority.HIGHEST` 最后执行，能读到 forced-hosts 和其他插件已经设好的目标；`join.override-existing: true` 恢复旧行为，一律送大厅。
 
 完整配置项见 [docs/configuration.md](docs/configuration.md)，子服接入协议见 [docs/integration.md](docs/integration.md)，版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
