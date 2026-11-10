@@ -4,7 +4,7 @@
 
 A proxy-side plugin that sends players back to a lobby. The same jar works on Velocity and BungeeCord; the logic lives in one place and each proxy only supplies events, scheduling, and message channels.
 
-Players can return with a command. Players kicked by a backend server are redirected to a lobby. The initial server on join can be a lobby. A backend server can also request a transfer for a named player over plugin messages. The target lobby is picked from a configured list using one of several strategies.
+Players can return with a command. Players kicked by a backend server can be redirected to a lobby. The initial server on join can be a lobby. A backend server can also request a transfer for a named player over plugin messages. The target lobby is picked from a configured list using one of several strategies.
 
 ## Install
 
@@ -18,7 +18,7 @@ Players can return with a command. Players kicked by a backend server are redire
 The artifact is Java 17 bytecode, so the proxy needs Java 17 or newer. Use the file name of the version you downloaded for the checksum:
 
 ```
-sha256sum -c HubReturn-1.0.1.jar.sha256
+sha256sum -c HubReturn-1.0.2.jar.sha256
 ```
 
 ## Commands and permissions
@@ -69,6 +69,8 @@ Points worth knowing:
 - A new request for a player who already has one in flight is refused with a reply, not queued.
 - Cooldowns are rolled back on cancel, timeout, and failed confirmation, so a fresh attempt is not blocked by the earlier one.
 - Retries exclude servers already tried in the same transfer, so a broken server is not picked over and over.
+- `kick.enabled` defaults to `false` in the template. Set `kick.mode` and `kick.servers` before enabling it: `mode: all` takes over every backend kick, so on a mixed network a Forge backend's kicks would also land players in a Paper lobby.
+- `join` replaces the initial server only when it is the proxy default. Velocity runs at `PostOrder.LAST` and BungeeCord at `EventPriority.HIGHEST`, so forced hosts and other plugins have already set their target; `join.override-existing: true` restores the old unconditional behaviour.
 
 Full configuration reference: [docs/configuration.en.md](docs/configuration.en.md). Backend integration protocol: [docs/integration.en.md](docs/integration.en.md). Version history: [CHANGELOG.en.md](CHANGELOG.en.md).
 

@@ -4,6 +4,15 @@
 
 Versions follow `v*` tags; dates are UTC.
 
+## v1.0.2 — 2026-11-10
+
+- Initial server selection no longer overwrites the target unconditionally: both proxies now run last and only replace the proxy default, keeping forced hosts and targets set by other plugins
+- `config.yml` gains `join.override-existing` (default `false`); setting it to `true` restores the old unconditional behaviour
+- `kick.enabled` now defaults to `false` in the template so a fresh install does not take over every backend kick; configure `kick.mode` and `kick.servers` before enabling it
+- Chinese and English README and configuration docs now cover mixed networks, Forge backends, and listener ordering
+
+Listener ordering, forced hosts, and mixed-network behaviour are only covered by unit tests; they have not been verified on a running proxy. Velocity 4.x runtime compatibility is still unverified.
+
 ## v1.0.1 — 2026-11-09
 
 - Player-facing messages now follow the client locale (`zh_CN -> zh -> default`); the default language is `en`. Proxy logs, console output, and reply details stay on the default language.

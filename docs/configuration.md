@@ -66,21 +66,24 @@ English: [configuration.en.md](configuration.en.md)
 
 | 键 | 模板值 | 说明 |
 | --- | --- | --- |
-| `enabled` | `true` | 是否接管被子服踢出的玩家 |
+| `enabled` | `false` | 是否接管被子服踢出的玩家；模板默认关闭 |
 | `mode` | `all` | `all` 全接管 / `whitelist` 只接 `servers` 里的 / `blacklist` 排除 `servers` 里的 |
 | `servers` | 空列表 | 配合 `mode` 的服务器名列表，忽略大小写 |
 | `reason-contains` | 空列表 | 踢出原因命中任意一个子串才接管；留空表示不看原因，匹配忽略大小写 |
 | `bypass-permission` | `hubreturn.bypass.kick` | 有此权限的玩家不被接管 |
 | `show-custom-reason` | `true` | 用 `kick.redirected` 文案替换原有踢出原因；`false` 保留原原因 |
 
-踢出接管不走确认流程，`confirm.apply-to` 只管命令和插件消息两类入口。
+模板默认不接管任何踢人。启用前先设 `mode` 和 `servers`：`mode: all` 配空 `servers` 会把所有后端踢出都送进大厅，混合网络里 Forge 子服的踢出也走这条路，通常不是想要的结果。踢出接管不走确认流程，`confirm.apply-to` 只管命令和插件消息两类入口。
 
 ### join
 
 | 键 | 模板值 | 说明 |
 | --- | --- | --- |
-| `enabled` | `true` | 首次进代理时把初始服务器改成选中的大厅 |
+| `enabled` | `true` | 首次进代理时，在初始服是代理默认服的情况下换成选中的大厅 |
+| `override-existing` | `false` | `true` 时无视 forced-hosts 和其他插件设的初始服，一律送大厅 |
 | `bypass-permission` | `hubreturn.bypass.join` | 有此权限时不改初始服务器 |
+
+两端都在最后执行：Velocity 是 `PostOrder.LAST`，BungeeCord 是 `EventPriority.HIGHEST`，因此能读到别的监听器已经改过的目标。只有目标名等于代理默认初始服时才替换，Velocity 比对 `try` 列表，BungeeCord 比对 `defaultServer` 与 `serverPriority`；forced-hosts 或其他插件指定的服务器保持原样。事件没给出目标时由 HubReturn 兜底。
 
 ### messaging
 

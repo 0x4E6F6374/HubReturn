@@ -1,5 +1,6 @@
 package org.hubreturn.velocity;
 
+import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
@@ -7,20 +8,24 @@ import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.hubreturn.core.HubCore;
 import org.hubreturn.core.ServerRef;
+import org.hubreturn.core.Settings;
 
 import java.util.Locale;
 
 final class VelocityListeners {
 
     private final HubCore core;
+    private final ProxyServer proxy;
 
-    VelocityListeners(HubCore core) {
+    VelocityListeners(HubCore core, ProxyServer proxy) {
         this.core = core;
+        this.proxy = proxy;
     }
 
     @Subscribe
@@ -66,8 +71,16 @@ final class VelocityListeners {
         });
     }
 
-    @Subscribe
+    @Subscribe(order = PostOrder.LAST)
     public void onChoose(PlayerChooseInitialServerEvent event) {
+        Settings current = core.settings();
+        String existing = event.getInitialServer()
+                .map(server -> server.getServerInfo().getName())
+                .orElse(null);
+        if (!current.joinReplacesInitial(existing,
+                proxy.getConfiguration().getAttemptConnectionOrder())) {
+            return;
+        }
         core.pickInitial(new VelocityPlayer(event.getPlayer()))
                 .ifPresent(server -> event.setInitialServer(((VelocityServer) server).raw()));
     }

@@ -216,6 +216,25 @@ public final class Settings {
         return join.bool("enabled");
     }
 
+    public boolean joinOverrideExisting() {
+        return join.bool("override-existing");
+    }
+
+    public boolean joinReplacesInitial(String existingName, List<String> defaultNames) {
+        if (joinOverrideExisting()) {
+            return true;
+        }
+        if (existingName == null) {
+            return true;
+        }
+        for (String name : defaultNames) {
+            if (name.equalsIgnoreCase(existingName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String joinBypassPermission() {
         return join.string("bypass-permission");
     }

@@ -66,21 +66,24 @@ Only servers the proxy can resolve enter the pool. Retries exclude servers alrea
 
 | Key | Template value | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | Take over players kicked by backend servers |
+| `enabled` | `false` | Take over players kicked by backend servers; off in the template |
 | `mode` | `all` | `all` handles every kick / `whitelist` only servers in `servers` / `blacklist` excludes servers in `servers` |
 | `servers` | empty list | Server names used by `mode`, compared case-insensitively |
 | `reason-contains` | empty list | Only take over when the kick reason contains one of these substrings; empty means ignore the reason, matching is case-insensitive |
 | `bypass-permission` | `hubreturn.bypass.kick` | Players with this permission are not taken over |
 | `show-custom-reason` | `true` | Replace the original kick reason with `kick.redirected`; `false` keeps the original |
 
-Kick takeover never goes through confirmation. `confirm.apply-to` covers only the command and plugin message entry points.
+The template takes over no kicks. Set `mode` and `servers` before enabling it: `mode: all` with an empty `servers` sends every backend kick to a lobby, which on a mixed network means a Forge backend's kicks also land in a Paper lobby. Kick takeover never goes through confirmation. `confirm.apply-to` covers only the command and plugin message entry points.
 
 ### join
 
 | Key | Template value | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | Set the initial server on join to the selected lobby |
+| `enabled` | `true` | Replace the initial server on join with the selected lobby, but only when it is the proxy default |
+| `override-existing` | `false` | `true` ignores forced hosts and other plugins' initial server and always sends to a lobby |
 | `bypass-permission` | `hubreturn.bypass.join` | Leave the initial server unchanged |
+
+Both proxies run last: Velocity at `PostOrder.LAST`, BungeeCord at `EventPriority.HIGHEST`, so targets already set by other listeners are visible. The target is replaced only when its name matches the proxy default: Velocity compares against the `try` list, BungeeCord against `defaultServer` and `serverPriority`. Forced hosts and targets set by other plugins are kept. If the event supplies no target, HubReturn supplies the lobby.
 
 ### messaging
 

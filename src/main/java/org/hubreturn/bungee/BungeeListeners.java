@@ -3,6 +3,8 @@ package org.hubreturn.bungee;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.config.ListenerInfo;
+import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.Connection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
@@ -14,6 +16,7 @@ import net.md_5.bungee.api.event.ServerKickEvent;
 import net.md_5.bungee.api.event.TabCompleteEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
+import net.md_5.bungee.event.EventPriority;
 import org.hubreturn.core.HubCore;
 import org.hubreturn.core.ServerRef;
 import org.hubreturn.core.Settings;
@@ -74,9 +77,20 @@ final class BungeeListeners implements Listener {
         });
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onConnect(ServerConnectEvent event) {
         if (event.getReason() != ServerConnectEvent.Reason.JOIN_PROXY) {
+            return;
+        }
+        ServerInfo target = event.getTarget();
+        ListenerInfo listener = event.getPlayer().getPendingConnection().getListener();
+        List<String> defaults = new ArrayList<>();
+        if (listener.getServerPriority() != null) {
+            defaults.addAll(listener.getServerPriority());
+        }
+        defaults.add(listener.getDefaultServer());
+        if (!core.settings().joinReplacesInitial(
+                target == null ? null : target.getName(), defaults)) {
             return;
         }
         core.pickInitial(new BungeePlayer(event.getPlayer()))

@@ -32,7 +32,8 @@ lobbies:
   retry-delay-millis: 500
 
 kick:
-  enabled: true
+  # 默认不接管；启用前先配 mode 和 servers，mode: all 会接管所有后端踢人
+  enabled: false
   # all / whitelist / blacklist
   mode: all
   servers: []
@@ -43,6 +44,8 @@ kick:
 
 join:
   enabled: true
+  # true 会无视 forced-hosts 和其他插件设的初始服，一律送大厅
+  override-existing: false
   bypass-permission: hubreturn.bypass.join
 
 messaging:

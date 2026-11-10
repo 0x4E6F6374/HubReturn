@@ -48,7 +48,7 @@ public final class VelocityBootstrap implements Platform {
             logger.error(bad.toString(), bad);
             throw new IllegalStateException(bad);
         }
-        proxy.getEventManager().register(this, new VelocityListeners(core));
+        proxy.getEventManager().register(this, new VelocityListeners(core, proxy));
     }
 
     @Subscribe
