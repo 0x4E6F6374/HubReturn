@@ -18,7 +18,7 @@ Players can return with a command. Players kicked by a backend server can be red
 The artifact is Java 17 bytecode, so the proxy needs Java 17 or newer. Use the file name of the version you downloaded for the checksum:
 
 ```
-sha256sum -c HubReturn-1.0.1.jar.sha256
+sha256sum -c HubReturn-1.0.2.jar.sha256
 ```
 
 ## Commands and permissions
