@@ -4,12 +4,14 @@ English: [CHANGELOG.en.md](CHANGELOG.en.md)
 
 版本以 `v*` tag 为准，日期用 UTC。
 
-## Unreleased
+## v1.0.2 — 2026-11-10
 
 - 进服选服不再无条件覆盖初始服：两端改到最后执行，只有代理默认初始服才换成大厅，forced-hosts 与其他插件指定的服务器保持原样
 - `config.yml` 新增 `join.override-existing`（默认 `false`），设为 `true` 恢复旧的无条件覆盖行为
 - `kick.enabled` 模板默认值改为 `false`，避免装好就接管所有后端踢人；启用前需自行配置 `kick.mode` 与 `kick.servers`
 - 中英 README 与配置文档补充混合网络、Forge 子服以及事件顺序的说明
+
+事件顺序、forced-hosts 与混合网络下的表现只经过单元测试，未在真实代理端验证；Velocity 4.x 运行时兼容仍待实机确认。
 
 ## v1.0.1 — 2026-11-09
 
